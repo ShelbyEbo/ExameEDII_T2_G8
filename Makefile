@@ -6,7 +6,10 @@ SRCS = auth.c \
 	avl.c \
 	main.c \
 	presentation.c \
-	user.c
+	file.c \
+	heap.c \
+	huffman.c \
+	storage.c 
 
 OBJS = $(SRCS:.c=.o)
 
