@@ -1,106 +1,17 @@
-#include "presentation.h"
+#include "menus.h"
 #include "auth.h"
 #include "avl.h"
 #include "user.h"
 #include "file.h"
+#include "menu_chat_aux.h"
+#include "menu_graphs_aux.h"
+#include "menus_aux.h"
 #include "heap.h"
 #include "huffman.h"
 #include "storage.h"
 #include "chat.h"
 #include "graph.h"
 #include "report.h"
-
-static void clear_input_buffer(void)
-{
-    int ch;
-    while ((ch = getchar()) != '\n' && ch != EOF)
-        ;
-}
-
-static int get_int(const char *prompt, int *value)
-{
-    int r;
-
-    while (1)
-    {
-        printf("%s", prompt);
-        r = scanf("%d", value);
-        if (r == EOF)
-        {
-            printf("\nA sair...\n");
-            return EOF;
-        }
-        if (r == 1)
-        {
-            clear_input_buffer();
-            return 1;
-        }
-        printf("Entrada inválida. Tente novamente.\n");
-        clear_input_buffer();
-    }
-}
-
-static int get_line(const char *prompt, char *buf, int size)
-{
-    while (1)
-    {
-        printf("%s", prompt);
-        if (fgets(buf, size, stdin) == NULL)
-        {
-            printf("\nA sair...\n");
-            return EOF;
-        }
-        buf[strcspn(buf, "\r\n")] = '\0';
-        if (buf[0] != '\0')
-            return 1;
-        printf("Entrada inválida. Tente novamente.\n");
-    }
-}
-
-static void separator(void)
-{
-    printf("  ------------------------------------------------\n");
-}
-
-static void header(const char *title)
-{
-    printf("\n  ================================================\n");
-    printf("  %s\n", title);
-    printf("  ================================================\n\n");
-}
-
-static void pause_enter(void)
-{
-    int c;
-    printf("\n  Prima ENTER para continuar...");
-    fflush(stdout);
-    while ((c = getchar()) != '\n' && c != EOF)
-        ;
-}
-
-static void clear_screen(void)
-{
-#ifdef _WIN32
-    system("cls");
-#else
-    system("clear");
-#endif
-}
-
-static User *prompt_user(Auth *auth, const char *prompt, int *eof)
-{
-    int id;
-    int r = get_int(prompt, &id);
-    if (r == EOF)
-    {
-        *eof = 1;
-        return NULL;
-    }
-    User *u = find_user(auth->users, id);
-    if (!u)
-        printf("Utilizador com ID %d não encontrado.\n", id);
-    return u;
-}
 
 int menu_create_user(Auth *auth)
 {
@@ -224,8 +135,7 @@ int menu_add_file(Auth *auth)
     if (get_line("Nome do ficheiro: ", name, sizeof(name)) != 1)
         return 0;
 
-    auth->current_user->files =
-        adicionar_ficheiro(auth->current_user->files, id, name, NULL);
+    auth->current_user->files = adicionar_ficheiro(auth->current_user->files, id, name, fopen(name, "a"));
     printf("Ficheiro '%s' adicionado.\n", name);
     return 1;
 }
@@ -270,139 +180,191 @@ int menu_list_files(Auth *auth)
     return 1;
 }
 
-int menu_huffman_compress(Auth *auth)
+int menu_huffman_compress_file(Auth *auth)
 {
     (void)auth;
 
-    char texto[1000];
-    char saida[5000];
-    char codigo[MAX_CODE];
+    char input[256];
+    char output[256];
 
-    if (get_line("Texto a comprimir: ", texto, sizeof(texto)) != 1)
+    if (get_line("Ficheiro de entrada: ", input, sizeof(input)) != 1)
         return 0;
 
+    if (get_line("Ficheiro comprimido (.huff): ",  output, sizeof(output)) != 1)
+        return 0;
+
+    FILE *in = fopen(input, "rb");
+    if (!in)
+    {
+        printf("Erro ao abrir %s\n", input);
+        return 1;
+    }
     int freq[MAX_CHAR] = {0};
-    for (int i = 0; texto[i]; i++)
-        freq[(unsigned char)texto[i]]++;
+    unsigned char byte;
+
+    while (fread(&byte, 1, 1, in) == 1)
+        freq[byte]++;
+
+    rewind(in);
 
     for (int i = 0; i < MAX_CHAR; i++)
         codigos[i][0] = '\0';
 
     No *raiz = construirArvore(freq);
+
     if (!raiz)
     {
-        printf("Erro ao construir a árvore de Huffman.\n");
+        fclose(in);
+        printf("Erro ao construir a árvore.\n");
         return 1;
     }
-
-    printf("\n  Tabela de códigos:\n");
+    char codigo[MAX_CODE];
+    printf("\nTabela de códigos:\n");
     gerarCodigos(raiz, codigo, 0);
-    comprimir(texto, saida);
-    int orig = tamanhoOriginal(texto);
-    int comp = tamanhoComprimido(texto);
-    float taxa = (orig > 0) ? taxaCompressao(orig, comp) : 0.0f;
-    printf("\n  Texto original  : %s\n", texto);
-    printf("  Bits comprimidos: %s\n", saida);
-    printf("  Tamanho original : %d bits\n", orig);
-    printf("  Tamanho comprimido: %d bits\n", comp);
-    printf("  Taxa de compressão: %.2f%%\n", taxa);
-    printf("  Verificação (descompressão):\n  ");
-    descomprimir(raiz, saida);
-    Registro r;
-    strncpy(r.textoOriginal, texto, sizeof(r.textoOriginal) - 1);
-    r.textoOriginal[sizeof(r.textoOriginal) - 1] = '\0';
-    strncpy(r.comprimido, saida, sizeof(r.comprimido) - 1);
-    r.comprimido[sizeof(r.comprimido) - 1] = '\0';
-    r.tamanhoOriginal   = orig;
-    r.tamanhoComprimido = comp;
-    salvarRegistro(r);
-    printf("  Registo guardado em dados.txt\n");
-    (void)raiz;
+    FILE *out = fopen(strcat(output, ".huff"), "ab");
+    if (!out)
+    {
+        fclose(in);
+        printf("Erro ao criar %s\n", output);
+        return 1;
+    }
+    long tamanhoOriginal = 0;
+    for (int i = 0; i < MAX_CHAR; i++)
+        tamanhoOriginal += freq[i];
 
+    fwrite(&tamanhoOriginal, sizeof(long), 1, out);
+    fwrite(freq, sizeof(int), MAX_CHAR, out);
+
+    unsigned char buffer = 0;
+    int bitCount = 0;
+
+    while (fread(&byte, 1, 1, in) == 1)
+    {
+        char *cod = codigos[byte];
+        for (int i = 0; cod[i]; i++)
+        {
+            buffer <<= 1;
+            if (cod[i] == '1')
+                buffer |= 1;
+            bitCount++;
+            if (bitCount == 8)
+            {
+                fwrite(&buffer, 1, 1, out);
+                buffer = 0;
+                bitCount = 0;
+            }
+        }
+    }
+    if (bitCount > 0)
+    {
+        buffer <<= (8 - bitCount);
+        fwrite(&buffer, 1, 1, out);
+    }
+    fclose(in);
+    fclose(out);
+    printf("\nFicheiro comprimido com sucesso.\n");
+    printf("Entrada : %s\n", input);
+    printf("Saída   : %s\n", output);
     return 1;
 }
 
-static int chat_enviar(Auth *auth)
+int menu_huffman_decompress_file(Auth *auth)
 {
-    header("CHAT > Enviar Mensagem");
+    (void)auth;
 
-    int eof = 0;
-    User *s = prompt_user(auth, "ID do remetente: ", &eof);
-    if (eof) return 0;
-    if (!s)  return 1;
+    char input[256];
+    char output[256];
 
-    User *r = prompt_user(auth, "ID do destinatário: ", &eof);
-    if (eof) return 0;
-    if (!r)  return 1;
-
-    if (s->blocked || r->blocked)
-    {
-        printf("Um dos utilizadores está bloqueado.\n");
-        return 1;
-    }
-
-    char content[MAX_MESSAGE_LEN];
-    if (get_line("Mensagem: ", content, sizeof(content)) != 1)
+    if (get_line("Ficheiro de entrada (.huff): ", input, sizeof(input)) != 1)
         return 0;
 
-    int id = chat_send(auth->message, auth->chat, s, r, content);
-    printf(id > 0 ? "\n  Mensagem #%d enviada!\n" : "\n  Erro ao enviar.\n", id);
-    return 1;
-}
-
-static int chat_receber(Auth *auth)
-{
-    header("CHAT > Receber Próxima Mensagem");
-    if (queue_is_empty(auth->message))
+    if (get_line("Ficheiro de saída: ", output, sizeof(output)) != 1)
+        return 0;
+    FILE *in = fopen(input, "rb");
+    if (!in)
     {
-        printf("  Fila vazia. Nenhuma mensagem para receber.\n");
+        printf("Erro ao abrir %s\n", input);
         return 1;
     }
-    Message *m = chat_receive(auth->message);
-    if (m)
-    {
-        char buf[32];
-        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", localtime(&m->timestamp));
-        separator();
-        printf("  ID        : #%d\n", m->id);
-        printf("  De        : %s\n", m->sender->name);
-        printf("  Para      : %s\n", m->receiver->name);
-        printf("  Mensagem  : %s\n", m->content);
-        printf("  Timestamp : %s\n", buf);
-        separator();
-        free(m);
-    }
-    return 1;
-}
 
-static int chat_historico(Auth *auth)
-{
-    header("CHAT > Histórico Completo");
-    if (auth->chat->count == 0)
+    long tamanhoOriginal;
+    if (fread(&tamanhoOriginal, sizeof(long), 1, in) != 1)
     {
-        printf("  Sem mensagens.\n");
+        fclose(in);
+        printf("Ficheiro inválido.\n");
         return 1;
     }
-    history_print(auth->chat);
-    return 1;
-}
+    int freq[MAX_CHAR];
+    if (fread(freq, sizeof(int), MAX_CHAR, in) != MAX_CHAR)
+    {
+        fclose(in);
+        printf("Cabeçalho inválido.\n");
+        return 1;
+    }
 
-static int chat_historico_user(Auth *auth)
-{
-    header("CHAT > Histórico por Utilizador");
-    int eof = 0;
-    User *u = prompt_user(auth, "ID do utilizador: ", &eof);
-    if (eof) return 0;
-    if (!u)  return 1;
-    history_print_user(auth->chat, u);
-    return 1;
-}
+    No *raiz = construirArvore(freq);
 
-static void chat_status(Auth *auth)
-{
-    header("CHAT > Estado da Fila");
-    printf("  Mensagens na fila : %d\n", auth->message->size);
-    printf("  Total no histórico: %d\n", auth->chat->count);
+    if (!raiz)
+    {
+        fclose(in);
+        printf("Erro ao reconstruir a árvore.\n");
+        return 1;
+    }
+
+    FILE *out = fopen(output, "ab");
+    if (!out)
+    {
+        fclose(in);
+        printf("Erro ao criar %s\n", output);
+        return 1;
+    }
+    if (!raiz->esq && !raiz->dir)
+    {
+        for (long i = 0; i < tamanhoOriginal; i++)
+            fwrite(&raiz->caractere, 1, 1, out);
+
+        fclose(in);
+        fclose(out);
+        printf("\nFicheiro recuperado com sucesso.\n");
+        printf("Entrada : %s\n", input);
+        printf("Saída   : %s\n", output);
+
+        return 1;
+    }
+
+    unsigned char byte;
+    long escritos = 0;
+
+    No *atual = raiz;
+    while (escritos < tamanhoOriginal && fread(&byte, 1, 1, in) == 1)
+    {
+        for (int i = 7; i >= 0; i--)
+        {
+            int bit = (byte >> i) & 1;
+
+            if (bit == 0)
+                atual = atual->esq;
+            else
+                atual = atual->dir;
+            if (!atual->esq && !atual->dir)
+            {
+                fwrite(&atual->caractere, 1, 1, out);
+                escritos++;
+                if (escritos == tamanhoOriginal)
+                    break;
+                atual = raiz;
+            }
+        }
+    }
+
+    fclose(in);
+    fclose(out);
+    printf("\nFicheiro recuperado com sucesso.\n");
+    printf("Entrada : %s\n", input);
+    printf("Saída   : %s\n", output);
+    printf("Bytes recuperados: %ld\n", tamanhoOriginal);
+
+    return 1;
 }
 
 int menu_chat(Auth *auth)
@@ -441,119 +403,6 @@ int menu_chat(Auth *auth)
         }
     } while (op != 0);
 
-    return 1;
-}
-
-static int graph_registar(Auth *auth)
-{
-    header("PARTILHAS > Registar Partilha");
-
-    int eof = 0;
-    User *s = prompt_user(auth, "ID do remetente: ", &eof);
-    if (eof) return 0;
-    if (!s)  return 1;
-
-    User *r = prompt_user(auth, "ID do destinatário: ", &eof);
-    if (eof) return 0;
-    if (!r)  return 1;
-
-    if (!s->files)
-    {
-        printf("  O utilizador '%s' não tem ficheiros.\n", s->name);
-        return 1;
-    }
-
-    /* Listar ficheiros do remetente */
-    printf("  Ficheiros de %s:\n", s->name);
-    listar_ficheiros(s->files);
-
-    int fid;
-    if (get_int("  ID do ficheiro a partilhar: ", &fid) != 1)
-        return 0;
-
-    File *file = procurar_por_id(s->files, fid);
-    if (!file)
-    {
-        printf("  Ficheiro não encontrado.\n");
-        return 1;
-    }
-
-    if (graph_add_share(auth->graph, s, r, file) == 0)
-        printf("\n  Partilha registada!\n");
-    else
-        printf("\n  Erro ao registar partilha.\n");
-    return 1;
-}
-
-static int graph_add_user_menu(Auth *auth)
-{
-    header("PARTILHAS > Adicionar Utilizador ao Grafo");
-    int eof = 0;
-    User *u = prompt_user(auth, "ID do utilizador: ", &eof);
-    if (eof) return 0;
-    if (!u)  return 1;
-
-    int idx = graph_add_user(auth->graph, u);
-    if (idx >= 0)
-        printf("\n  Utilizador '%s' registado no grafo (índice %d).\n", u->name, idx);
-    else
-        printf("\n  Erro ao registar utilizador.\n");
-    return 1;
-}
-
-static void graph_listar(Auth *auth)
-{
-    header("PARTILHAS > Grafo de Partilhas");
-    if (auth->graph->user_count == 0)
-    {
-        printf("  Sem dados.\n");
-        return;
-    }
-    graph_print(auth->graph);
-}
-
-static void graph_users(Auth *auth)
-{
-    header("PARTILHAS > Utilizadores Registados no Grafo");
-    if (auth->graph->user_count == 0)
-    {
-        printf("  Nenhum utilizador.\n");
-        return;
-    }
-    for (int i = 0; i < auth->graph->user_count; i++)
-        printf("  [%d] %s\n", i, auth->graph->users[i]->name);
-    printf("\n  Total: %d\n", auth->graph->user_count);
-}
-
-static int graph_dfs_menu(Auth *auth)
-{
-    header("PARTILHAS > Pesquisa DFS");
-    if (auth->graph->user_count == 0)
-    {
-        printf("  Sem utilizadores no grafo.\n");
-        return 1;
-    }
-    int eof = 0;
-    User *u = prompt_user(auth, "ID do utilizador de partida: ", &eof);
-    if (eof) return 0;
-    if (!u)  return 1;
-    graph_dfs(auth->graph, u);
-    return 1;
-}
-
-static int graph_bfs_menu(Auth *auth)
-{
-    header("PARTILHAS > Pesquisa BFS");
-    if (auth->graph->user_count == 0)
-    {
-        printf("  Sem utilizadores no grafo.\n");
-        return 1;
-    }
-    int eof = 0;
-    User *u = prompt_user(auth, "ID do utilizador de partida: ", &eof);
-    if (eof) return 0;
-    if (!u)  return 1;
-    graph_bfs(auth->graph, u);
     return 1;
 }
 
@@ -699,15 +548,16 @@ void print_menu(Auth *auth)
 
     printf("\n-- Compressão Huffman --\n");
     printf("12. Comprimir texto\n");
+    printf("13. Descomprimir texto\n");
 
     printf("\n-- Chat --\n");
-    printf("13. Módulo de Chat\n");
+    printf("14. Módulo de Chat\n");
 
     printf("\n-- Partilhas --\n");
-    printf("14. Módulo de Partilhas\n");
+    printf("15. Módulo de Partilhas\n");
 
     printf("\n-- Relatórios --\n");
-    printf("15. Relatórios\n");
+    printf("16. Relatórios\n");
 
     printf("\n 0. Sair\n");
     printf("Opção: ");

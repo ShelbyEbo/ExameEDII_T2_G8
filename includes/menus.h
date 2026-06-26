@@ -1,5 +1,5 @@
-#ifndef PRESENTATION_H
-# define PRESENTATION_H
+#ifndef MENUS_H
+# define MENUS_H
 
 # include <stdio.h>
 # include <stdlib.h>
@@ -18,6 +18,8 @@ int  menu_add_file(Auth *auth);
 int  menu_remove_file(Auth *auth);
 int  menu_list_files(Auth *auth);
 int  menu_huffman_compress(Auth *auth);
+int  menu_huffman_compress_file(Auth *auth);
+int  menu_huffman_decompress_file(Auth *auth);
 int  menu_chat(Auth *auth);
 int  menu_graph(Auth *auth);
 int  menu_reports(Auth *auth);

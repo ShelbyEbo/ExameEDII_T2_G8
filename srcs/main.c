@@ -58,10 +58,11 @@ int main(void)
             case  9: if (!menu_add_file(auth))     running = 0; break;
             case 10: if (!menu_remove_file(auth))  running = 0; break;
             case 11: if (!menu_list_files(auth))   running = 0; break;
-            case 12: if (!menu_huffman_compress(auth)) running = 0; break;
-            case 13: if (!menu_chat(auth))         running = 0; break;
-            case 14: if (!menu_graph(auth))        running = 0; break;
-            case 15: if (!menu_reports(auth))      running = 0; break;
+            case 12: if (!menu_huffman_compress_file(auth)) running = 0; break;
+            case 13: if (!menu_huffman_decompress_file(auth)) running = 0; break;
+            case 14: if (!menu_chat(auth))         running = 0; break;
+            case 15: if (!menu_graph(auth))        running = 0; break;
+            case 16: if (!menu_reports(auth))      running = 0; break;
             case  0: printf("A sair...\n");                     break;
             default: printf("Opção inválida.\n");               break;
         }

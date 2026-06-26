@@ -12,7 +12,10 @@ SRCS    = srcs/auth.c        \
           srcs/chat.c        \
           srcs/graph.c       \
           srcs/report.c      \
-          srcs/presentation.c \
+          srcs/menus.c \
+          srcs/menus_aux.c \
+          srcs/menu_chat_aux.c \
+          srcs/menu_graphs_aux.c \
           srcs/main.c
 
 OBJS    = $(SRCS:srcs/%.c=obj/%.o)
