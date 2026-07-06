@@ -1,5 +1,12 @@
 #include "main.h"
 
+void free_everything(Auth *auth)
+{
+    remover_diretorio("compress"); 
+    remover_diretorio("decompress"); 
+    printf("A sair...\n"); 
+}
+
 int main(void)
 {
     Auth *auth = init_auth();
@@ -63,7 +70,7 @@ int main(void)
             case 14: if (!menu_chat(auth))         running = 0; break;
             case 15: if (!menu_graph(auth))        running = 0; break;
             case 16: if (!menu_reports(auth))      running = 0; break;
-            case  0: printf("A sair...\n");                     break;
+            case  0: free_everything(auth); break;
             default: printf("Opção inválida.\n");               break;
         }
     } while (option != 0 && running);

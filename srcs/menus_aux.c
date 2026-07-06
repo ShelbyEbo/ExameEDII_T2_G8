@@ -7,6 +7,34 @@ void clear_input_buffer(void)
         ;
 }
 
+void remover_diretorio(const char *caminho)
+{
+    DIR *dir = opendir(caminho);
+    if (!dir)
+        return;
+
+    struct dirent *entrada;
+    char subcaminho[512];
+
+    while ((entrada = readdir(dir)) != NULL)
+    {
+        if (strcmp(entrada->d_name, ".") == 0 || strcmp(entrada->d_name, "..") == 0)
+            continue;
+
+        snprintf(subcaminho, sizeof(subcaminho), "%s/%s", caminho, entrada->d_name);
+
+        struct stat info;
+        stat(subcaminho, &info);
+
+        if (S_ISDIR(info.st_mode))
+            remover_diretorio(subcaminho);  // recursivo para subpastas
+        else
+            remove(subcaminho);             // apaga o ficheiro
+    }
+    closedir(dir);
+    rmdir(caminho);                         // apaga a pasta agora vazia
+}
+
 int get_int(const char *prompt, int *value)
 {
     int r;
