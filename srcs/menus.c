@@ -289,7 +289,7 @@ int menu_huffman_decompress_file(Auth *auth)
         printf ("Erro ao criar o ficheiro de descompressão");
         return 1;
     }
-    if (get_line("Ficheiro de entrada (caminho completo do ficheiro + .huff): ", input, sizeof(input)) != 1)
+    if (get_line("Ficheiro de entrada (caminho completo do ficheiro + .huff)\nEx: (compress/ficheiro.huff): ", input, sizeof(input)) != 1)
         return 0;
 
     if (get_line("Ficheiro de saída: ", output, sizeof(output)) != 1)
