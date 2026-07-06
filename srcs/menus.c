@@ -190,7 +190,7 @@ int menu_huffman_compress_file(Auth *auth)
 
     if (resultado != 0 && errno != EEXIST)
     {
-        printf ("Erro ao criar o ficheiro de compressão");
+        printf ("Erro ao criar o diretório de compressão");
         return 1;
     }
     if (get_line("Ficheiro de entrada: ", input, sizeof(input)) != 1)
@@ -202,7 +202,7 @@ int menu_huffman_compress_file(Auth *auth)
     FILE *in = fopen(input, "rb");
     if (!in)
     {
-        printf("Erro ao abrir %s\n", input);
+        printf("Erro ao abrir ou criar %s\n", input);
         return 1;
     }
     int freq[MAX_CHAR] = {0};
@@ -270,6 +270,7 @@ int menu_huffman_compress_file(Auth *auth)
     }
     fclose(in);
     fclose(out);
+    free_arvore(raiz);
     printf("\nFicheiro comprimido com sucesso.\n");
     printf("Entrada : %s\n", input);
     printf("Saída   : %s\n", output);
@@ -286,7 +287,7 @@ int menu_huffman_decompress_file(Auth *auth)
 
     if (resultado != 0 && errno != EEXIST)
     {
-        printf ("Erro ao criar o ficheiro de descompressão");
+        printf ("Erro ao criar o diretório de descompressão");
         return 1;
     }
     if (get_line("Ficheiro de entrada (caminho completo do ficheiro + .huff)\nEx: (compress/ficheiro.huff): ", input, sizeof(input)) != 1)
@@ -297,7 +298,7 @@ int menu_huffman_decompress_file(Auth *auth)
     FILE *in = fopen(input, "rb");
     if (!in)
     {
-        printf("Erro ao abrir %s\n", input);
+        printf("Erro ao abrir ou criar %s\n", input);
         return 1;
     }
 
@@ -374,6 +375,7 @@ int menu_huffman_decompress_file(Auth *auth)
 
     fclose(in);
     fclose(out);
+    free_arvore(raiz);
     printf("\nFicheiro recuperado com sucesso.\n");
     printf("Entrada : %s\n", input);
     printf("Saída   : %s\n", output);

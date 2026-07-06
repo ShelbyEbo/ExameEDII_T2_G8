@@ -27,12 +27,12 @@ void remover_diretorio(const char *caminho)
         stat(subcaminho, &info);
 
         if (S_ISDIR(info.st_mode))
-            remover_diretorio(subcaminho);  // recursivo para subpastas
+            remover_diretorio(subcaminho);
         else
-            remove(subcaminho);             // apaga o ficheiro
+            remove(subcaminho);
     }
     closedir(dir);
-    rmdir(caminho);                         // apaga a pasta agora vazia
+    rmdir(caminho);
 }
 
 int get_int(const char *prompt, int *value)

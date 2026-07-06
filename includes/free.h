@@ -15,6 +15,7 @@
 #include "graph.h"
 #include "report.h"
 
+void free_arvore(No *raiz);
 void free_everything(Auth *auth);
 
 #endif
