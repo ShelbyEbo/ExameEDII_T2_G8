@@ -186,7 +186,13 @@ int menu_huffman_compress_file(Auth *auth)
 
     char input[256];
     char output[256];
+    int resultado = mkdir("compress", 0755);
 
+    if (resultado != 0 && errno != EEXIST)
+    {
+        printf ("Erro ao criar o ficheiro de compressão");
+        return 1;
+    }
     if (get_line("Ficheiro de entrada: ", input, sizeof(input)) != 1)
         return 0;
 
@@ -221,7 +227,9 @@ int menu_huffman_compress_file(Auth *auth)
     char codigo[MAX_CODE];
     printf("\nTabela de códigos:\n");
     gerarCodigos(raiz, codigo, 0);
-    FILE *out = fopen(strcat(output, ".huff"), "ab");
+    char caminho[512];
+    snprintf(caminho, sizeof(caminho), "compress/%s.huff", output);
+    FILE *out = fopen(caminho, "ab");
     if (!out)
     {
         fclose(in);
@@ -274,8 +282,14 @@ int menu_huffman_decompress_file(Auth *auth)
 
     char input[256];
     char output[256];
+    int resultado = mkdir("decompress", 0755);
 
-    if (get_line("Ficheiro de entrada (.huff): ", input, sizeof(input)) != 1)
+    if (resultado != 0 && errno != EEXIST)
+    {
+        printf ("Erro ao criar o ficheiro de descompressão");
+        return 1;
+    }
+    if (get_line("Ficheiro de entrada (caminho completo do ficheiro + .huff): ", input, sizeof(input)) != 1)
         return 0;
 
     if (get_line("Ficheiro de saída: ", output, sizeof(output)) != 1)
@@ -310,8 +324,9 @@ int menu_huffman_decompress_file(Auth *auth)
         printf("Erro ao reconstruir a árvore.\n");
         return 1;
     }
-
-    FILE *out = fopen(output, "ab");
+    char caminho[512];
+    snprintf(caminho, sizeof(caminho), "decompress/%s", output);
+    FILE *out = fopen(caminho, "ab");
     if (!out)
     {
         fclose(in);
