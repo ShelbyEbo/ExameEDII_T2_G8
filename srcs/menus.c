@@ -13,9 +13,15 @@
 #include "graph.h"
 #include "report.h"
 
+#ifdef _WIN32
+#define MKDIR(path) mkdir(path)
+#else
+#define MKDIR(path) mkdir(path, 0755)
+#endif
+
 int menu_create_user(Auth *auth)
 {
-    int  id;
+    int id;
     char name[100];
 
     if (get_int("ID: ", &id) != 1)
@@ -127,7 +133,7 @@ int menu_add_file(Auth *auth)
         return 1;
     }
 
-    int  id;
+    int id;
     char name[256];
 
     if (get_int("ID do ficheiro: ", &id) != 1)
@@ -186,17 +192,17 @@ int menu_huffman_compress_file(Auth *auth)
 
     char input[256];
     char output[256];
-    int resultado = mkdir("compress", 0755);
+    int resultado = MKDIR("compress");
 
     if (resultado != 0 && errno != EEXIST)
     {
-        printf ("Erro ao criar o diretório de compressão");
+        printf("Erro ao criar o diretório de compressão");
         return 1;
     }
     if (get_line("Ficheiro de entrada: ", input, sizeof(input)) != 1)
         return 0;
 
-    if (get_line("Ficheiro comprimido (.huff): ",  output, sizeof(output)) != 1)
+    if (get_line("Ficheiro comprimido (.huff): ", output, sizeof(output)) != 1)
         return 0;
 
     FILE *in = fopen(input, "rb");
@@ -283,11 +289,11 @@ int menu_huffman_decompress_file(Auth *auth)
 
     char input[256];
     char output[256];
-    int resultado = mkdir("decompress", 0755);
+    int resultado = MKDIR("decompress");
 
     if (resultado != 0 && errno != EEXIST)
     {
-        printf ("Erro ao criar o diretório de descompressão");
+        printf("Erro ao criar o diretório de descompressão");
         return 1;
     }
     if (get_line("Ficheiro de entrada (caminho completo do ficheiro + .huff)\nEx: (compress/ficheiro.huff): ", input, sizeof(input)) != 1)
@@ -407,16 +413,36 @@ int menu_chat(Auth *auth)
 
         switch (op)
         {
-            case 1: if (!chat_enviar(auth))         return 0; pause_enter(); break;
-            case 2: if (!chat_receber(auth))        return 0; pause_enter(); break;
-            case 3: if (!chat_historico(auth))      return 0; pause_enter(); break;
-            case 4: if (!chat_historico_user(auth)) return 0; pause_enter(); break;
-            case 5: chat_status(auth);                         pause_enter(); break;
-            case 0: break;
-            default:
-                printf("  Opção inválida.\n");
-                pause_enter();
-                break;
+        case 1:
+            if (!chat_enviar(auth))
+                return 0;
+            pause_enter();
+            break;
+        case 2:
+            if (!chat_receber(auth))
+                return 0;
+            pause_enter();
+            break;
+        case 3:
+            if (!chat_historico(auth))
+                return 0;
+            pause_enter();
+            break;
+        case 4:
+            if (!chat_historico_user(auth))
+                return 0;
+            pause_enter();
+            break;
+        case 5:
+            chat_status(auth);
+            pause_enter();
+            break;
+        case 0:
+            break;
+        default:
+            printf("  Opção inválida.\n");
+            pause_enter();
+            break;
         }
     } while (op != 0);
 
@@ -447,17 +473,40 @@ int menu_graph(Auth *auth)
 
         switch (op)
         {
-            case 1: if (!graph_registar(auth))      return 0; pause_enter(); break;
-            case 2: if (!graph_add_user_menu(auth)) return 0; pause_enter(); break;
-            case 3: graph_listar(auth);                        pause_enter(); break;
-            case 4: graph_users(auth);                         pause_enter(); break;
-            case 5: if (!graph_dfs_menu(auth))      return 0; pause_enter(); break;
-            case 6: if (!graph_bfs_menu(auth))      return 0; pause_enter(); break;
-            case 0: break;
-            default:
-                printf("  Opção inválida.\n");
-                pause_enter();
-                break;
+        case 1:
+            if (!graph_registar(auth))
+                return 0;
+            pause_enter();
+            break;
+        case 2:
+            if (!graph_add_user_menu(auth))
+                return 0;
+            pause_enter();
+            break;
+        case 3:
+            graph_listar(auth);
+            pause_enter();
+            break;
+        case 4:
+            graph_users(auth);
+            pause_enter();
+            break;
+        case 5:
+            if (!graph_dfs_menu(auth))
+                return 0;
+            pause_enter();
+            break;
+        case 6:
+            if (!graph_bfs_menu(auth))
+                return 0;
+            pause_enter();
+            break;
+        case 0:
+            break;
+        default:
+            printf("  Opção inválida.\n");
+            pause_enter();
+            break;
         }
     } while (op != 0);
 
@@ -495,41 +544,41 @@ int menu_reports(Auth *auth)
 
         switch (op)
         {
-            case 1:
-                header("Partilhas por Utilizador");
-                report_shares_per_user(auth->graph);
-                pause_enter();
-                break;
-            case 2:
-                header("Utilizador que Mais Partilhou");
-                report_top_sender(auth->graph);
-                pause_enter();
-                break;
-            case 3:
-                header("Utilizador que Mais Recebeu");
-                report_top_receiver(auth->graph);
-                pause_enter();
-                break;
-            case 4:
-                header("Ficheiros Mais Partilhados");
-                report_most_shared_files(auth->graph);
-                pause_enter();
-                break;
-            case 5:
-                header("Total de Membros");
-                report_total_members(auth->graph);
-                pause_enter();
-                break;
-            case 6:
-                report_all(auth->graph);
-                pause_enter();
-                break;
-            case 0:
-                break;
-            default:
-                printf("  Opção inválida.\n");
-                pause_enter();
-                break;
+        case 1:
+            header("Partilhas por Utilizador");
+            report_shares_per_user(auth->graph);
+            pause_enter();
+            break;
+        case 2:
+            header("Utilizador que Mais Partilhou");
+            report_top_sender(auth->graph);
+            pause_enter();
+            break;
+        case 3:
+            header("Utilizador que Mais Recebeu");
+            report_top_receiver(auth->graph);
+            pause_enter();
+            break;
+        case 4:
+            header("Ficheiros Mais Partilhados");
+            report_most_shared_files(auth->graph);
+            pause_enter();
+            break;
+        case 5:
+            header("Total de Membros");
+            report_total_members(auth->graph);
+            pause_enter();
+            break;
+        case 6:
+            report_all(auth->graph);
+            pause_enter();
+            break;
+        case 0:
+            break;
+        default:
+            printf("  Opção inválida.\n");
+            pause_enter();
+            break;
         }
     } while (op != 0);
 
