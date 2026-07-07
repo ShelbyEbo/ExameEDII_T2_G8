@@ -171,8 +171,16 @@ int menu_remove_file(Auth *auth)
         printf("Ficheiro não encontrado.\n");
         return 1;
     }
-    auth->current_user->files =
-        remover_ficheiro(auth->current_user->files, id);
+    File *curr = procurar_por_id(auth->current_user->files, id);
+    if (!curr)
+    {
+        printf("Ficheiro não encontrado.\n");
+        return 1;
+    }
+    char caminho[512];
+    snprintf(caminho, sizeof(caminho), "%s/%s", auth->users->user->name, curr->name);
+    auth->current_user->files = remover_ficheiro(auth->current_user->files, id);
+    remove(caminho);
     printf("Ficheiro removido.\n");
     return 1;
 }
