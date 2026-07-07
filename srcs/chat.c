@@ -92,6 +92,32 @@ void queue_destroy(MessageQueue *q)
 }
 
 // ENVIO / RECEPÇÃO
+static void inbox_enqueue(MessageQueue *q, int msg_id,
+                           User *sender, User *receiver,
+                           const char *content)
+{
+    if (!q || q->size >= MAX_MESSAGES)
+        return;
+    Message *m = (Message *)malloc(sizeof(Message));
+    if (!m)
+        return;
+    m->id = msg_id;
+    m->sender = sender;
+    m->receiver = receiver;
+    strncpy(m->content, content, MAX_MESSAGE_LEN - 1);
+    m->content[MAX_MESSAGE_LEN - 1] = '\0';
+    m->timestamp = time(NULL);
+    m->next = NULL;
+    if (q->rear == NULL)
+        q->front = q->rear = m;
+    else
+    {
+        q->rear->next = m;
+        q->rear = m;
+    }
+    q->size++;
+}
+
 int chat_send(MessageQueue *q, ChatHistory *hist,
               User *sender, User *receiver,
               const char *content)
@@ -109,6 +135,9 @@ int chat_send(MessageQueue *q, ChatHistory *hist,
 
     tmp.id = id;
     history_add(hist, &tmp);
+
+    if (receiver->inbox)
+        inbox_enqueue(receiver->inbox, id, sender, receiver, content);
 
     printf("[Chat] Mensagem #%d enviada: %s -> %s\n", id, tmp.sender->name, tmp.receiver->name);
     return id;

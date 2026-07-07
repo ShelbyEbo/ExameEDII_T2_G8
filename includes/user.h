@@ -11,8 +11,7 @@ typedef struct User
     int blocked;
     char name[100];
     FileList *files;
-    // Message *inbox;
-    // Share   *shares;
+    struct MessageQueue *inbox;
 } User;
 
 User *create_user(int id, char *name);

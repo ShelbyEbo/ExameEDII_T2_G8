@@ -44,12 +44,12 @@ int chat_enviar(Auth *auth)
 int chat_receber(Auth *auth)
 {
     header("CHAT > Receber Próxima Mensagem");
-    if (queue_is_empty(auth->message))
+    if (queue_is_empty(auth->current_user->inbox))
     {
         printf("  Fila vazia. Nenhuma mensagem para receber.\n");
         return 1;
     }
-    Message *m = chat_receive(auth->message);
+    Message *m = chat_receive(auth->current_user->inbox);
     if (m)
     {
         char buf[32];
@@ -92,6 +92,7 @@ int chat_historico_user(Auth *auth)
 void chat_status(Auth *auth)
 {
     header("CHAT > Estado da Fila");
-    printf("  Mensagens na fila : %d\n", auth->message->size);
-    printf("  Total no histórico: %d\n", auth->chat->count);
+    printf("  Mensagens na fila geral : %d\n", auth->message->size);
+    printf("  Na sua caixa de entrada : %d\n", auth->current_user->inbox->size);
+    printf("  Total no histórico      : %d\n", auth->chat->count);
 }

@@ -1,4 +1,5 @@
 #include "user.h"
+#include "chat.h"
 
 User *create_user(int id, char *name)
 {
@@ -13,6 +14,14 @@ User *create_user(int id, char *name)
     user->name[99] = '\0';
 
     user->files = NULL;
+
+    user->inbox = malloc(sizeof(MessageQueue));
+    if (!user->inbox)
+    {
+        free(user);
+        return NULL;
+    }
+    queue_init(user->inbox);
 
     return user;
 }
@@ -36,5 +45,10 @@ void destroy_user(User *user)
         f = next;
     }
     user->files = NULL;
+    if (user->inbox)
+    {
+        queue_destroy(user->inbox);
+        free(user->inbox);
+    }
     free(user);
 }
