@@ -13,7 +13,12 @@ void free_everything(Auth *auth)
 {
     if (!auth)
         return;
-    remover_diretorio("compress");
-    remover_diretorio("decompress");
+    FileList *files = auth->users->user->files;
+    while (files != NULL)
+    {
+        remover_ficheiro(files, files->file->id);
+        files = files->next;
+    } 
+    remover_diretorio(auth->users->user->name);
     printf("A sair...\n");
 }

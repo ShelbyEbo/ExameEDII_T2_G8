@@ -135,13 +135,20 @@ int menu_add_file(Auth *auth)
 
     int id;
     char name[256];
+    int resultado = MKDIR(auth->users->user->name);
 
+    if (resultado != 0 && errno != EEXIST)
+    {
+        printf("Erro ao criar o diretório %s\n", auth->users->user->name);
+        return 1;
+    }
     if (get_int("ID do ficheiro: ", &id) != 1)
         return 0;
     if (get_line("Nome do ficheiro: ", name, sizeof(name)) != 1)
         return 0;
-
-    auth->current_user->files = adicionar_ficheiro(auth->current_user->files, id, name, fopen(name, "a"));
+    char caminho[512];
+    snprintf(caminho, sizeof(caminho), "%s/%s", auth->users->user->name, name);
+    auth->current_user->files = adicionar_ficheiro(auth->current_user->files, id, name, fopen(caminho, "a"));
     printf("Ficheiro '%s' adicionado.\n", name);
     return 1;
 }
@@ -192,11 +199,11 @@ int menu_huffman_compress_file(Auth *auth)
 
     char input[256];
     char output[256];
-    int resultado = MKDIR("compress");
+    int resultado = MKDIR(auth->users->user->name);
 
     if (resultado != 0 && errno != EEXIST)
     {
-        printf("Erro ao criar o diretório de compressão");
+        printf("Erro ao criar o diretório %s\n", auth->users->user->name);
         return 1;
     }
     if (get_line("Ficheiro de entrada: ", input, sizeof(input)) != 1)
@@ -234,7 +241,7 @@ int menu_huffman_compress_file(Auth *auth)
     printf("\nTabela de códigos:\n");
     gerarCodigos(raiz, codigo, 0);
     char caminho[512];
-    snprintf(caminho, sizeof(caminho), "compress/%s.huff", output);
+    snprintf(caminho, sizeof(caminho), "%s/%s.huff", auth->users->user->name, output);
     FILE *out = fopen(caminho, "ab");
     if (!out)
     {
@@ -289,11 +296,11 @@ int menu_huffman_decompress_file(Auth *auth)
 
     char input[256];
     char output[256];
-    int resultado = MKDIR("decompress");
+    int resultado = MKDIR(auth->users->user->name);
 
     if (resultado != 0 && errno != EEXIST)
     {
-        printf("Erro ao criar o diretório de descompressão");
+        printf("Erro ao criar o diretório %s\n", auth->users->user->name);
         return 1;
     }
     if (get_line("Ficheiro de entrada (caminho completo do ficheiro + .huff)\nEx: (compress/ficheiro.huff): ", input, sizeof(input)) != 1)
@@ -332,7 +339,7 @@ int menu_huffman_decompress_file(Auth *auth)
         return 1;
     }
     char caminho[512];
-    snprintf(caminho, sizeof(caminho), "decompress/%s", output);
+    snprintf(caminho, sizeof(caminho), "%s/%s", auth->users->user->name, output);
     FILE *out = fopen(caminho, "ab");
     if (!out)
     {
