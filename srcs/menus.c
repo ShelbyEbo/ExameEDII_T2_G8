@@ -218,7 +218,7 @@ int menu_huffman_compress_file(Auth *auth)
         printf("Erro ao criar o diretório %s\n", auth->current_user->name);
         return 1;
     }
-    if (get_line("Ficheiro de entrada: ", input, sizeof(input)) != 1)
+    if (get_line("Ficheiro de entrada (caminho completo)\nEx: srcs/main.c: ", input, sizeof(input)) != 1)
         return 0;
 
     if (get_line("Ficheiro comprimido (.huff): ", output, sizeof(output)) != 1)
