@@ -4,11 +4,9 @@ int graph_registar(Auth *auth)
 {
     header("PARTILHAS > Registar Partilha");
 
-    int eof = 0;
-    User *s = prompt_user(auth, "ID do remetente: ", &eof);
-    if (eof) return 0;
-    if (!s)  return 1;
+    User *s = auth->current_user;
 
+    int eof = 0;
     User *r = prompt_user(auth, "ID do destinatário: ", &eof);
     if (eof) return 0;
     if (!r)  return 1;

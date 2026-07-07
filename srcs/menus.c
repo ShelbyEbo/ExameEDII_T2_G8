@@ -144,6 +144,11 @@ int menu_add_file(Auth *auth)
     }
     if (get_int("ID do ficheiro: ", &id) != 1)
         return 0;
+    if (procurar_por_id(auth->current_user->files, id))
+    {
+        printf("Já existe um ficheiro com o ID %d.\n", id);
+        return 1;
+    }
     if (get_line("Nome do ficheiro: ", name, sizeof(name)) != 1)
         return 0;
     char caminho[512];
@@ -407,6 +412,12 @@ int menu_huffman_decompress_file(Auth *auth)
 
 int menu_chat(Auth *auth)
 {
+    if (!auth->current_user)
+    {
+        printf("Faça login primeiro.\n");
+        return 1;
+    }
+
     int op;
 
     do
@@ -466,6 +477,12 @@ int menu_chat(Auth *auth)
 
 int menu_graph(Auth *auth)
 {
+    if (!auth->current_user)
+    {
+        printf("Faça login primeiro.\n");
+        return 1;
+    }
+
     int op;
 
     do
@@ -475,11 +492,10 @@ int menu_graph(Auth *auth)
         printf("  MÓDULO DE PARTILHAS\n");
         printf("  ================================================\n");
         printf("  [1] Registar partilha\n");
-        printf("  [2] Adicionar utilizador ao grafo\n");
-        printf("  [3] Ver grafo de partilhas\n");
-        printf("  [4] Ver utilizadores no grafo\n");
-        printf("  [5] Pesquisa DFS\n");
-        printf("  [6] Pesquisa BFS\n");
+        printf("  [2] Ver grafo de partilhas\n");
+        printf("  [3] Ver utilizadores no grafo\n");
+        printf("  [4] Pesquisa DFS\n");
+        printf("  [5] Pesquisa BFS\n");
         printf("  [0] Voltar ao menu principal\n");
         separator();
 
@@ -494,24 +510,19 @@ int menu_graph(Auth *auth)
             pause_enter();
             break;
         case 2:
-            if (!graph_add_user_menu(auth))
-                return 0;
-            pause_enter();
-            break;
-        case 3:
             graph_listar(auth);
             pause_enter();
             break;
-        case 4:
+        case 3:
             graph_users(auth);
             pause_enter();
             break;
-        case 5:
+        case 4:
             if (!graph_dfs_menu(auth))
                 return 0;
             pause_enter();
             break;
-        case 6:
+        case 5:
             if (!graph_bfs_menu(auth))
                 return 0;
             pause_enter();
