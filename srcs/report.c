@@ -4,6 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Utilitário interno: índice do User no grafo via ponteiro */
+static int user_index(const ShareGraph *g, const User *user)
+{
+    for (int i = 0; i < g->user_count; i++)
+        if (g->users[i] == user)
+            return i;
+    return -1;
+}
+
 static void count_sent(const ShareGraph *g, int *sent_count)
 {
     for (int i = 0; i < g->user_count; i++)
@@ -28,7 +37,9 @@ static void count_received(const ShareGraph *g, int *recv_count)
         Share *cur = g->adj[i];
         while (cur)
         {
-            recv_count[cur->to->id]++;
+            int to_idx = user_index(g, cur->to);
+            if (to_idx >= 0)
+                recv_count[to_idx]++;
             cur = cur->next;
         }
     }
@@ -39,7 +50,7 @@ static int cmp_file_count(const void *a, const void *b)
     return ((FileCount *)b)->count - ((FileCount *)a)->count;
 }
 
-// Partilhas por utilizador
+/* ── Partilhas por utilizador ──────────────────────────── */
 void report_shares_per_user(const ShareGraph *g)
 {
     int sent[MAX_USERS], recv[MAX_USERS];
@@ -52,19 +63,16 @@ void report_shares_per_user(const ShareGraph *g)
     printf("  %-20s  %8s  %9s\n", "Utilizador", "Enviadas", "Recebidas");
     printf("  %-20s  %8s  %9s\n", "--------------------", "--------", "---------");
     for (int i = 0; i < g->user_count; i++)
-    {
-        printf("  %-20s  %8d  %9d\n",
-               g->users[i]->name, sent[i], recv[i]);
-    }
+        printf("  %-20s  %8d  %9d\n", g->users[i]->name, sent[i], recv[i]);
     printf("+----------------------------------------------+\n\n");
 }
 
-// Utilizador que mais partilhou
+/* ── Utilizador que mais partilhou ─────────────────────── */
 void report_top_sender(const ShareGraph *g)
 {
     if (g->user_count == 0)
     {
-        printf("[Relatorio] Sem utilizadores registados.\n");
+        printf("[Relatorio] Sem utilizadores.\n");
         return;
     }
 
@@ -73,25 +81,22 @@ void report_top_sender(const ShareGraph *g)
 
     int best = 0;
     for (int i = 1; i < g->user_count; i++)
-    {
         if (sent[i] > sent[best])
             best = i;
-    }
 
     printf("\n+----------------------------------------------+\n");
     printf("|  Utilizador que Mais Partilhou               |\n");
     printf("+----------------------------------------------+\n");
-    printf("  %-20s  %d partilha(s) enviada(s)\n",
-           g->users[best]->name, sent[best]);
+    printf("  %-20s  %d partilha(s) enviada(s)\n", g->users[best]->name, sent[best]);
     printf("+----------------------------------------------+\n\n");
 }
 
-// Utilizador que mais recebeu
+/* ── Utilizador que mais recebeu ───────────────────────── */
 void report_top_receiver(const ShareGraph *g)
 {
     if (g->user_count == 0)
     {
-        printf("[Relatorio] Sem utilizadores registados.\n");
+        printf("[Relatorio] Sem utilizadores.\n");
         return;
     }
 
@@ -100,29 +105,52 @@ void report_top_receiver(const ShareGraph *g)
 
     int best = 0;
     for (int i = 1; i < g->user_count; i++)
-    {
         if (recv[i] > recv[best])
             best = i;
-    }
 
     printf("\n+----------------------------------------------+\n");
     printf("|  Utilizador que Mais Recebeu                 |\n");
     printf("+----------------------------------------------+\n");
-    printf("  %-20s  %d partilha(s) recebida(s)\n",
-           g->users[best]->name, recv[best]);
+    printf("  %-20s  %d partilha(s) recebida(s)\n", g->users[best]->name, recv[best]);
     printf("+----------------------------------------------+\n\n");
 }
 
-// Ficheiros mais partilhados
+/* ── Ficheiros mais partilhados ────────────────────────── */
 void report_most_shared_files(const ShareGraph *g)
 {
+    if (g->total_shares == 0)
+    {
+        printf("\n+----------------------------------------------+\n");
+        printf("|  Ficheiros Mais Partilhados                  |\n");
+        printf("+----------------------------------------------+\n");
+        printf("  (nenhum ficheiro registado)\n");
+        printf("+----------------------------------------------+\n\n");
+        return;
+    }
+
     int max_files = g->total_shares + 1;
+
     FileCount *files = (FileCount *)calloc(max_files, sizeof(FileCount));
     if (!files)
     {
         printf("  (erro de memoria)\n");
         return;
     }
+
+    for (int i = 0; i < max_files; i++)
+    {
+        files[i].file = (File *)calloc(1, sizeof(File));
+        if (!files[i].file)
+        {
+
+            for (int j = 0; j < i; j++)
+                free(files[j].file);
+            free(files);
+            printf("  (erro de memoria)\n");
+            return;
+        }
+    }
+
     int nfiles = 0;
 
     for (int i = 0; i < g->user_count; i++)
@@ -130,6 +158,12 @@ void report_most_shared_files(const ShareGraph *g)
         Share *cur = g->adj[i];
         while (cur)
         {
+            if (!cur->file || !cur->file->name)
+            {
+                cur = cur->next;
+                continue;
+            }
+
             int found = -1;
             for (int f = 0; f < nfiles; f++)
             {
@@ -140,13 +174,10 @@ void report_most_shared_files(const ShareGraph *g)
                 }
             }
             if (found >= 0)
-            {
                 files[found].count++;
-            }
             else
             {
-                strncpy(files[nfiles].file->name, cur->file->name, MAX_FILENAME - 1);
-                files[nfiles].file->name[MAX_FILENAME - 1] = '\0';
+                files[nfiles].file->name = strdup(cur->file->name);
                 files[nfiles].count = 1;
                 nfiles++;
             }
@@ -160,23 +191,28 @@ void report_most_shared_files(const ShareGraph *g)
     printf("|  Ficheiros Mais Partilhados                  |\n");
     printf("+----------------------------------------------+\n");
     if (nfiles == 0)
-    {
         printf("  (nenhum ficheiro registado)\n");
-    }
     else
     {
         printf("  %-30s  %s\n", "Ficheiro", "Vezes");
         printf("  %-30s  %s\n", "------------------------------", "-----");
         for (int f = 0; f < nfiles; f++)
-        {
             printf("  %-30s  %d\n", files[f].file->name, files[f].count);
-        }
     }
     printf("+----------------------------------------------+\n\n");
+
+    for (int i = 0; i < max_files; i++)
+    {
+        if (files[i].file)
+        {
+            free(files[i].file->name);
+            free(files[i].file);
+        }
+    }
     free(files);
 }
 
-// Total de membros
+/* ── Total de membros ──────────────────────────────────── */
 void report_total_members(const ShareGraph *g)
 {
     printf("\n+----------------------------------------------+\n");
@@ -187,7 +223,7 @@ void report_total_members(const ShareGraph *g)
     printf("+----------------------------------------------+\n\n");
 }
 
-// Todos os relatorios
+/* ── Todos os relatorios ───────────────────────────────── */
 void report_all(const ShareGraph *g)
 {
     printf("\n\n========== RELATORIO GERAL ==========\n");
